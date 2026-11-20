@@ -77,7 +77,7 @@ function iface_remove(cfg)
 			wdev_remove(bss.ifname);
 }
 
-function iface_gen_config(config, start_disabled)
+function iface_gen_config(config, start_disabled, force_enable)
 {
 	let str = `data:
 ${join("\n", config.radio.data)}
@@ -89,12 +89,15 @@ channel=${config.radio.channel}
 		let type = i > 0 ? "bss" : "interface";
 		let nasid = bss.nasid ?? replace(bss.bssid, ":", "");
 		let bssid = bss.bssid;
+		let bss_data = force_enable
+			? filter(bss.data, (l) => l != "start_disabled=1")
+			: bss.data;
 		if (bss.mld_ap)
 			bssid += "\nmld_addr=" + bss.mld_bssid;
 		str += `
 ${type}=${bss.ifname}
 bssid=${bssid}
-${join("\n", bss.data)}
+${join("\n", bss_data)}
 nas_identifier=${nasid}
 `;
 		if (start_disabled)
@@ -1480,7 +1483,7 @@ function iface_reload_config(name, phydev, config, old_config)
 		bsscfg.bssid = addr;
 	}
 
-	let config_inline = iface_gen_config(config);
+	let config_inline = iface_gen_config(config, false, true);
 
 	// Step 7: fill in the gaps with new interfaces
 	for (let i = 0; i < length(config.bss); i++) {
